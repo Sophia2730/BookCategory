@@ -12,7 +12,7 @@ from gensim.models import Word2Vec
 BOOK_INDEX = 957    # 입력 데이터의 갯수 ( csv 파일 - 1 )
 VOCA_RANK = 7       # 1 ~ x위 까지 뽑는 단어
 VECTOR_SIZE = 10    # 단어 벡터화시 차원수
-TEST = 5            # 테스트할 데이터, 밑에서 x 번째
+TEST = 3            # 테스트할 데이터, 밑에서 x 번째
 
 pos_tagger = Twitter()
 def tokenize(doc):
@@ -21,6 +21,7 @@ f = codecs.open('book_data_957.csv', 'r', encoding='utf-8', errors='ignore')
 
 data = csv.reader(f,delimiter=",")
 
+## 불용어 처리
 book_stop_words = ['class', '영역', '시작', '분야상세보기' ,'배너' ,'gif', 'src','img','하위',
                    'http' , 'href', 'sysimage', '상품', '카테고리','alt','bl_arr','blank','height','width',
                    '정보', 'image', 'alt', 'morecate', 'renew','더보기','교환','빠른분야', 'com','bl_arrr','dvd',
@@ -139,17 +140,10 @@ for i in range(BOOK_INDEX):
 # print("x_data : ",x_data)
 # print("y_data : ",y_data)
 
-'''
-input   : 빈도수 1-10위 단어 tf-idf 값
-output  : 카테고리 ( one-hot 사용, 약 25개의 카테고리를 가짐 )
-['가정/생활/요리' '건강' '경제/경영' '과학/공학' '국어/외국어' '만화' '사회' '소설' '시/에세이' '어린이'
- '여행/지도' '역사/문화' '예술/대중문화' '유아' '인문' '자기계발' '종교' '취업/수험서' '컴퓨터/IT' '학습/참고서']
-'''
+
 ##########
 ## 학습  ##
 ##########
-training_epoches = 50
-batch_size = 14
 
 x_data = np.array(x_data)
 y_data = np.array(y_data)
@@ -160,7 +154,6 @@ y_train = y_data[0:(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST), :]
 x_test = x_data[(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST):(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST) + VOCA_RANK, :]
 y_test = y_data[(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST):(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST) + VOCA_RANK, :]
 
-train_x_batch, train_y_batch = tf.train.batch([x_data[0:(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST), :], y_data[0:(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST), :]], batch_size=70)
 # print(x_test)
 # print(y_test)
 
@@ -185,7 +178,7 @@ hypothesis = tf.nn.softmax(tf.matmul(h2,W3) + b3)
 cost = -tf.reduce_mean(Y * tf.log(hypothesis) + (1 - Y) *
                        tf.log(1 - hypothesis))
 
-train = tf.train.GradientDescentOptimizer(learning_rate=1.0e-2).minimize(cost)
+train = tf.train.AdamOptimizer(learning_rate=1.0e-4).minimize(cost)
 prediction = tf.arg_max(hypothesis, 1)
 predicted = tf.cast(hypothesis > 0.5, dtype=tf.float32)
 accuracy = tf.reduce_mean(tf.cast(tf.equal(predicted, Y), dtype=tf.float32))
@@ -206,6 +199,9 @@ with tf.Session() as sess:
 
 
 '''
+input   : 빈도수 1-7위 단어 tf-idf 값
+output  : 카테고리 ( one-hot 사용, 약 25개의 카테고리를 가짐 )
+
 ['가정/생활/요리' '건강' '경제/경영' '과학/공학' 
 '국어/외국어' '만화' '사전' '사회' 
 '소설' '시/에세이' '어린이' '여행/지도' 
