@@ -7,13 +7,17 @@
 
 
 
-### 주요 라이브러리
+
+
+## 주요 라이브러리
 
 - BeautifulSoup
 - KoNLPy
 - Scikit-Learn LabelEncoder
 - Word2Vec
 - TensorFlow
+
+
 
 
 
@@ -25,6 +29,8 @@
 - Word2Vec을 이용하여 단어별로 10차원 벡터화를 진행한다.
 - LabelEncoder를 이용하여 One-hot 방식으로 변경한다
 - 간단한 Neural Network를 이용하여 학습 후 테스트 작업을 거친다.
+
+
 
 
 
@@ -61,6 +67,8 @@
 
 
 
+
+
 ## 토큰화 및 벡터화
 
 1. Twitter를 이용하여 문장중 Noun형태만 찾아 배열에 저장한다.
@@ -76,11 +84,15 @@ y_data   : One-hot 기법을 통해 변환된 Category
 
 
 
-##TensorFlow Neural Network 구조
+
+
+## TensorFlow Neural Network 구조
 
 + Hidden Layer 2개와 AdamOptimizer를 이용하여 학습시킨다.
 
 ![NeuralNetwork](image/NeuralNetwork.png)
+
+
 
 
 
@@ -91,6 +103,8 @@ y_data   : One-hot 기법을 통해 변환된 Category
 ![result1](image/result1.png)
 
 ![result2](image/result2.png)
+
+
 
 
 
