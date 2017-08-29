@@ -3,21 +3,21 @@ import csv
 import codecs
 import numpy as np
 import tensorflow as tf
-from konlpy.tag import Twitter
 import operator
+from konlpy.tag import Twitter
 from sklearn.preprocessing import LabelEncoder
 from gensim.models import Word2Vec
 
-BOOK_INDEX = 334     # 입력 데이터의 갯수 ( csv 파일 - 1 )
-VOCA_RANK = 7        # 1 ~ x위 까지 뽑는 단어
-VECTOR_SIZE = 5      # 단어 벡터화시 차원수
-TEST = 30
 
+BOOK_INDEX = 957    # 입력 데이터의 갯수 ( csv 파일 - 1 )
+VOCA_RANK = 7       # 1 ~ x위 까지 뽑는 단어
+VECTOR_SIZE = 10    # 단어 벡터화시 차원수
+TEST = 5            # 테스트할 데이터, 밑에서 x 번째
 
 pos_tagger = Twitter()
 def tokenize(doc):
     return [t for t in pos_tagger.pos(doc, norm=True, stem=True)]
-f = codecs.open('book_data_334.csv', 'r', encoding='utf-8', errors='ignore')
+f = codecs.open('book_data_957.csv', 'r', encoding='utf-8', errors='ignore')
 
 data = csv.reader(f,delimiter=",")
 
@@ -79,8 +79,8 @@ print(category_freq)        # 카테고리별 데이터 갯
 
 
 top7 = [[[] for i in range(VOCA_RANK)] for j in range(BOOK_INDEX)]  # 빈도수 상위 7개의 값만 가져옴, 책 index / 순위 / 제목or벡터값
-for index in range(1,BOOK_INDEX+1):       # 책 index 횟수만큼 반복
-    frequency = {}                      # dictionary로 빈도수 확인
+for index in range(1,BOOK_INDEX+1):         # 책 index 횟수만큼 반복
+    frequency = {}                          # dictionary로 빈도수 확인
     for word in noun[index]:
         count = frequency.get(word, 0)
         frequency[word] = count + 1
@@ -91,7 +91,7 @@ for index in range(1,BOOK_INDEX+1):       # 책 index 횟수만큼 반복
             top7[index-1][i] = freq[i][0]          # 빈도수 높은 7개 단어를 input 배열에 넣는다
     except:
         ''''''
-print("============================")
+# print("============================")
 # print(top7)
 
 
@@ -101,7 +101,7 @@ feature_labels = np.array(category)
 encoder = LabelEncoder()
 encoder.fit(feature_labels)
 feature_labels = encoder.transform(feature_labels)
-# print("index : ", feature_labels)       ## category의 분류되는 클레스 index 확인
+# print("index : ", feature_labels)     ## category의 분류되는 클레스 index 확인
 print("class : ", encoder.classes_)     ## category의 분류되는 클레스 값 확인
 
 output_len = len(encoder.classes_)
@@ -118,9 +118,8 @@ for i in range(len(feature_labels)):
             print(i, j, len(feature_labels))
 
 vector = [[[] for j in range(VOCA_RANK)] for i in range(BOOK_INDEX)]
-# model = Word2Vec(top7, min_count=1, size=VECTOR_SIZE)
 
-model = Word2Vec(top7, size=VECTOR_SIZE, window = 2, min_count=1, workers=4, iter=100, sg=1)
+model = Word2Vec(top7, size=VECTOR_SIZE, min_count=1, iter=100, sg=1)
 for i in range(BOOK_INDEX):
     for j in range(VOCA_RANK):
             vector[i][j] = model.wv[top7[i][j]]
@@ -136,7 +135,7 @@ for i in range(BOOK_INDEX):
             except:
                 print(i,j,k)
 
-print(len(x_data), len(y_data))
+# print(len(x_data), len(y_data))
 # print("x_data : ",x_data)
 # print("y_data : ",y_data)
 
@@ -149,34 +148,38 @@ output  : 카테고리 ( one-hot 사용, 약 25개의 카테고리를 가짐 )
 ##########
 ## 학습  ##
 ##########
+training_epoches = 50
+batch_size = 14
+
 x_data = np.array(x_data)
 y_data = np.array(y_data)
 
 x_train = x_data[0:(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST), :]
 y_train = y_data[0:(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST), :]
 
-x_test = x_data[(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST):, :(BOOK_INDEX*VOCA_RANK-VOCA_RANK*(TEST-1))]
-y_test = y_data[(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST):, :(BOOK_INDEX*VOCA_RANK-VOCA_RANK*(TEST-1))]
+x_test = x_data[(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST):(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST) + VOCA_RANK, :]
+y_test = y_data[(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST):(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST) + VOCA_RANK, :]
 
+train_x_batch, train_y_batch = tf.train.batch([x_data[0:(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST), :], y_data[0:(BOOK_INDEX*VOCA_RANK-VOCA_RANK*TEST), :]], batch_size=70)
 # print(x_test)
 # print(y_test)
 
 X = tf.placeholder("float", [None, VECTOR_SIZE])
 Y = tf.placeholder("float", [None, output_len])
 
-W1 = tf.Variable(tf.random_normal([VECTOR_SIZE, 15]), name='weight1')
+W1 = tf.get_variable("W1", shape=[VECTOR_SIZE, 15], initializer=tf.contrib.layers.xavier_initializer())
 b1 = tf.Variable(tf.random_normal([15]), name='bias1')
 
-# W2 = tf.Variable(tf.random_normal([15, 15]), name='weight2')
-# b2 = tf.Variable(tf.random_normal([15]), name='bias2')
+W2 = tf.get_variable("W2", shape=[15, 20], initializer=tf.contrib.layers.xavier_initializer())
+b2 = tf.Variable(tf.random_normal([20]), name='bias2')
 
-W3 = tf.Variable(tf.random_normal([15, output_len]), name='weight3')
+W3 = tf.get_variable("W3", shape=[20, output_len], initializer=tf.contrib.layers.xavier_initializer())
 b3 = tf.Variable(tf.random_normal([output_len]), name='bias3')
 
 # h1은 첫번째 히든계층의 값들 계산
 h1 = tf.matmul(X, W1) + b1
-# h2 = tf.matmul(h1, W2) + b2
-hypothesis = tf.nn.softmax(tf.matmul(h1,W3) + b3)
+h2 = tf.matmul(h1, W2) + b2
+hypothesis = tf.nn.softmax(tf.matmul(h2,W3) + b3)
 
 # cost/loss function
 cost = -tf.reduce_mean(Y * tf.log(hypothesis) + (1 - Y) *
@@ -195,11 +198,11 @@ with tf.Session() as sess:
         if step % 200 == 0:
             print("cost : ", cost_val)
 
+    print("테스트 데이터 : ", top7[BOOK_INDEX-TEST])
     print("단어벌 예측값 :  " ,end="")
     for i in range(VOCA_RANK):
         print(encoder.classes_[sess.run(prediction, feed_dict={X: x_test})[i]], end=" ")
     print("\n실제 카테고리 : ", category[BOOK_INDEX-TEST])
-    print("테스트 데이터 : ", top7[BOOK_INDEX-TEST])
 
 
 '''
